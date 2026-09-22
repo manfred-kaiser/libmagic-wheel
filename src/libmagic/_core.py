@@ -88,7 +88,12 @@ class _ThreadState(threading.local):
     """Typed per-thread storage -- avoids untyped getattr()/Any at the mypy level."""
 
     cookie: _Cookie | None = None
-    mtime: int | None = None
+    # (mtime_ns, st_ino, st_dev): mtime alone isn't enough -- a database
+    # RPM-delivered with a pinned SOURCE_DATE_EPOCH can replace the file
+    # with different content at an identical mtime (verified: rpm still
+    # does an atomic rename onto a freshly allocated inode either way, so
+    # the inode always changes even when the mtime doesn't).
+    identity: tuple[int, int, int] | None = None
 
 
 _DATA_PACKAGE = f"{__package__}.data"
@@ -272,7 +277,7 @@ class Magic:
     def _current_cookie(self) -> _Cookie:
         cookie = self._local.cookie
         try:
-            mtime = self._path.stat().st_mtime_ns
+            st = self._path.stat()
         except FileNotFoundError:
             if cookie is not None:
                 # Transiently missing (e.g. mid atomic-rename elsewhere) --
@@ -282,13 +287,14 @@ class Magic:
             message = f"magic database not found: {self._path}"
             raise MagicError(message) from None
 
-        if cookie is None or mtime != self._local.mtime:
+        identity = (st.st_mtime_ns, st.st_ino, st.st_dev)
+        if cookie is None or identity != self._local.identity:
             cookie = self._open_cookie()
             # The previous _Cookie (if any) is dropped here -- its __del__
             # closes the stale native handle immediately (see _Cookie's
             # docstring), no separate manual magic_close() call needed.
             self._local.cookie = cookie
-            self._local.mtime = mtime
+            self._local.identity = identity
         return cookie
 
     def _classify(self, cookie: _Cookie, extra_flags: int, call: Callable[[], bytes | None]) -> str:

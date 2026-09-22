@@ -354,3 +354,28 @@ def test_no_reload_when_mtime_unchanged(compiled_mgc: Path) -> None:
     first_cookie = m._local.cookie
     m.from_buffer(TEXT_BYTES)
     assert m._local.cookie == first_cookie
+
+
+def test_reload_on_inode_change_even_with_identical_mtime(
+    compiled_mgc: Path, tmp_path: Path,
+) -> None:
+    # RPM upgrades with a pinned SOURCE_DATE_EPOCH deliver a replacement
+    # file at an unchanged mtime (verified against real rpmbuild/rpm) --
+    # mtime alone would silently miss this. The file is still atomically
+    # replaced (a fresh inode), which is what this test forces and checks.
+    live = tmp_path / "live.mgc"
+    live.write_bytes(compiled_mgc.read_bytes())
+    original_mtime_ns = live.stat().st_mtime_ns
+
+    m = Magic(magic_file=str(live))
+    m.from_buffer(TEXT_BYTES)
+    first_identity = m._local.identity
+
+    tmp = live.with_suffix(".tmp")
+    tmp.write_bytes(compiled_mgc.read_bytes())
+    os.utime(tmp, ns=(original_mtime_ns, original_mtime_ns))
+    tmp.replace(live)
+    assert live.stat().st_mtime_ns == original_mtime_ns
+
+    m.from_buffer(TEXT_BYTES)
+    assert m._local.identity != first_identity
