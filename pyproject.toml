@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "libmagic-wheel"
 version = "0.1.0"
 description = "A specific, pinned libmagic version bundled as a wheel, for our own applications where the distro's version is too old to read newer .mgc databases"
-requires-python = "==3.13.*"
+requires-python = ">=3.13"
 license = "BSD-2-Clause"
 license-files = ["LICENSE.file-upstream"]
 
