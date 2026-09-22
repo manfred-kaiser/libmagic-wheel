@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "libmagic-wheel"
+version = "0.1.0.dev0"
+description = "A specific, pinned libmagic version bundled as a wheel, for our own applications where the distro's version is too old to read newer .mgc databases"
+requires-python = "==3.13.*"
+license = "BSD-2-Clause"
+license-files = ["LICENSE.file-upstream"]
+
+[project.scripts]
+libmagic-wheel = "libmagic.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "mypy==2.3.1",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "ruff==0.16.8",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"libmagic.data" = ["libmagic.so.1", "magdir/*", "default.mgc"]
+
+[tool.pytest.ini_options]
+addopts = "--cov=libmagic --cov-report=term-missing --cov-fail-under=100"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+install_types = true
+non_interactive = true
+
+[tool.ruff]
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203",    # one-blank-line-before-class
+    "D213",    # multi-line-summary-second-line
+    "E501",    # line too long
+    "CPY001",  # no copyright-header convention decided for this project yet
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "S101",    # assert is exactly what pytest tests should use
+    "D",       # no docstring burden on test functions
+    "SLF001",  # white-box tests deliberately reach into private state
+    "PLR2004", # literal comparisons against sample bytes are the point
+    "S603",    # subprocess calls here use fixed, developer-written argv only
+    "S607",    # same -- no untrusted input reaches these
+    "FBT001",  # positional bool test-helper params are fine in test code
+    "FBT002",  # same
+]
+"src/libmagic/cli.py" = [
+    "T201",    # print() is the CLI's actual output, not a stray debug print
+]
