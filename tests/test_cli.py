@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from libmagic.cli import _split_override_dir, main
+from libmagic.cli import _split_override_dir, build_rpm, main
 
 from .conftest import PDF_BYTES
 
@@ -122,53 +122,37 @@ def test_classify_reports_per_file_errors_and_continues(
     assert "application/pdf" in captured.out
 
 
-def test_rpm_builds_and_installs_to_the_given_path(
-    compiled_mgc: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+def test_build_rpm_installs_to_the_given_path(
+    compiled_mgc: Path, tmp_path: Path,
 ) -> None:
     output_dir = tmp_path / "out"
 
-    exit_code = main(
-        [
-            "rpm",
-            "--mgc",
-            str(compiled_mgc),
-            "--name",
-            "libmagic-wheel-database-test",
-            "--version",
-            "1.0",
-            "--install-path",
-            "/etc/libmagic-wheel-test/combined.mgc",
-            "--output-dir",
-            str(output_dir),
-        ],
+    dest = build_rpm(
+        compiled_mgc,
+        "libmagic-wheel-database-test",
+        version="1.0",
+        install_path="/etc/libmagic-wheel-test/combined.mgc",
+        output_dir=output_dir,
     )
 
-    assert exit_code == 0
-    out = capsys.readouterr().out
-    assert "wrote" in out
-    rpms = list(output_dir.glob("*.rpm"))
-    assert len(rpms) == 1
-
+    assert dest.exists()
     listing = subprocess.run(
-        ["rpm", "-qlp", str(rpms[0])], capture_output=True, text=True, check=True,
+        ["rpm", "-qlp", str(dest)], capture_output=True, text=True, check=True,
     ).stdout
     assert listing.strip() == "/etc/libmagic-wheel-test/combined.mgc"
 
 
-def test_rpm_uses_current_utc_timestamp_when_version_omitted(
+def test_build_rpm_uses_current_utc_timestamp_when_version_omitted(
     compiled_mgc: Path, tmp_path: Path,
 ) -> None:
     output_dir = tmp_path / "out"
-    exit_code = main(
-        ["rpm", "--mgc", str(compiled_mgc), "--name", "libmagic-wheel-database-test",
-         "--output-dir", str(output_dir)],
+
+    dest = build_rpm(
+        compiled_mgc, "libmagic-wheel-database-test", output_dir=output_dir,
     )
-    assert exit_code == 0
-    rpms = list(output_dir.glob("*.rpm"))
-    assert len(rpms) == 1
 
     version = subprocess.run(
-        ["rpm", "-qp", "--qf", "%{VERSION}", str(rpms[0])],
+        ["rpm", "-qp", "--qf", "%{VERSION}", str(dest)],
         capture_output=True, text=True, check=True,
     ).stdout
     assert re.fullmatch(r"\d{12}", version)
@@ -189,72 +173,48 @@ def test_compile_with_rpm_derives_rpm_name_from_name(
     assert str(rpms[0]) in out
 
 
-def test_rpm_rejects_missing_mgc(tmp_path: Path) -> None:
-    exit_code = main(
-        [
-            "rpm",
-            "--mgc",
-            str(tmp_path / "nope.mgc"),
-            "--name",
-            "x",
-            "--version",
-            "1.0",
-        ],
-    )
-    assert exit_code == 1
+def test_build_rpm_rejects_missing_mgc(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="not found"):
+        build_rpm(tmp_path / "nope.mgc", "x", version="1.0")
 
 
 @pytest.mark.parametrize(
-    ("flag", "value"),
+    ("kwarg", "value"),
     [
-        ("--name", "bad name!"),
-        ("--version", "1.0-bad"),
-        ("--release", "1;rm -rf /"),
-        ("--license", "line1\nline2"),
-        ("--install-path", "relative/path.mgc"),
-        ("--install-path", "/etc/../etc/passwd"),
+        ("name", "bad name!"),
+        ("version", "1.0-bad"),
+        ("release", "1;rm -rf /"),
+        ("license_", "line1\nline2"),
+        ("install_path", "relative/path.mgc"),
+        ("install_path", "/etc/../etc/passwd"),
     ],
 )
-def test_rpm_rejects_unsafe_values(
-    compiled_mgc: Path, flag: str, value: str,
+def test_build_rpm_rejects_unsafe_values(
+    compiled_mgc: Path, kwarg: str, value: str,
 ) -> None:
-    exit_code = main(
-        [
-            "rpm",
-            "--mgc",
-            str(compiled_mgc),
-            "--name",
-            "libmagic-wheel-database-test",
-            "--version",
-            "1.0",
-            flag,
-            value,
-        ],
-    )
-    assert exit_code == 1
+    kwargs = {"name": "libmagic-wheel-database-test", "version": "1.0"}
+    kwargs[kwarg] = value
+    with pytest.raises(ValueError, match="invalid"):
+        build_rpm(compiled_mgc, **kwargs)
 
 
-def test_rpm_reports_missing_rpmbuild(
+def test_build_rpm_reports_missing_rpmbuild(
     compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(shutil, "which", lambda _name: None)
-    exit_code = main(
-        ["rpm", "--mgc", str(compiled_mgc), "--name", "x", "--version", "1.0"],
-    )
-    assert exit_code == 1
+    with pytest.raises(OSError, match="rpmbuild not found"):
+        build_rpm(compiled_mgc, "x", version="1.0")
 
 
-def test_rpm_reports_unsafe_resolved_source_path(
+def test_build_rpm_reports_unsafe_resolved_source_path(
     compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(Path, "resolve", lambda self: Path("/tmp/evil;rm"))  # noqa: ARG005, S108
-    exit_code = main(
-        ["rpm", "--mgc", str(compiled_mgc), "--name", "x", "--version", "1.0"],
-    )
-    assert exit_code == 1
+    with pytest.raises(ValueError, match="unsafe characters"):
+        build_rpm(compiled_mgc, "x", version="1.0")
 
 
-def test_rpm_reports_rpmbuild_failure(
+def test_build_rpm_reports_rpmbuild_failure(
     compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
@@ -262,13 +222,11 @@ def test_rpm_reports_rpmbuild_failure(
         "run",
         lambda *a, **k: subprocess.CompletedProcess(a, returncode=1, stdout="", stderr="boom"),  # noqa: ARG005
     )
-    exit_code = main(
-        ["rpm", "--mgc", str(compiled_mgc), "--name", "x", "--version", "1.0"],
-    )
-    assert exit_code == 1
+    with pytest.raises(OSError, match="rpmbuild failed"):
+        build_rpm(compiled_mgc, "x", version="1.0")
 
 
-def test_rpm_reports_success_with_no_output_file(
+def test_build_rpm_reports_success_with_no_output_file(
     compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
@@ -276,7 +234,5 @@ def test_rpm_reports_success_with_no_output_file(
         "run",
         lambda *a, **k: subprocess.CompletedProcess(a, returncode=0, stdout="", stderr=""),  # noqa: ARG005
     )
-    exit_code = main(
-        ["rpm", "--mgc", str(compiled_mgc), "--name", "x", "--version", "1.0"],
-    )
-    assert exit_code == 1
+    with pytest.raises(OSError, match=r"produced no \.rpm"):
+        build_rpm(compiled_mgc, "x", version="1.0")

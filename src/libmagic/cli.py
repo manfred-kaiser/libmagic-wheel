@@ -1,24 +1,21 @@
-"""CLI entry point: compile a .mgc, classify files with it, or RPM-package it.
+"""CLI entry point: compile a .mgc, and classify files with it.
 
 compile: every file placed in --override-dir is applied 1:1:
   - its name matches a bundled Magdir fragment -> replaces that fragment
   - its name matches nothing bundled              -> added as a new fragment
   Pass --rpm to also wrap the freshly compiled .mgc in an RPM named after
-  --name, in the same step (see "rpm" below) -- entirely optional, the
-  compile itself never requires rpmbuild.
+  --name, in the same step -- entirely optional, the compile itself never
+  requires rpmbuild. The RPM's version defaults to the current UTC
+  timestamp (there's no meaningful "next version" to derive otherwise --
+  a database rebuilt from unchanged inputs is still a new build); name,
+  version, release, license, and install path are all validated against
+  strict allowlists before ever touching the generated spec file --
+  rpmbuild's %install and %files sections are executed as real shell
+  script by rpmbuild itself, so an unvalidated value there is a
+  spec/shell injection vector, not just a formatting concern.
 
 classify: prints "path: description (mime_type)" per file, like file(1),
 but always both fields together rather than picking one via a flag.
-
-rpm: wraps an already-compiled .mgc in a minimal RPM. --name is the only
-required parameter; --version defaults to the current UTC timestamp
-(there's no meaningful "next version" to derive otherwise -- a database
-rebuilt from unchanged inputs is still a new build). --release, --license,
---install-path, and --version itself if you want a specific one, are all
-validated against strict allowlists before ever touching the generated
-spec file -- rpmbuild's %install and %files sections are executed as real
-shell script by rpmbuild itself, so an unvalidated value there is a
-spec/shell injection vector, not just a formatting concern.
 """
 
 from __future__ import annotations
@@ -234,24 +231,6 @@ def _run_classify(args: argparse.Namespace) -> int:
     return exit_code
 
 
-def _run_rpm(args: argparse.Namespace) -> int:
-    try:
-        dest = build_rpm(
-            args.mgc,
-            args.name,
-            version=args.version,
-            release=args.release,
-            license_=args.license,
-            install_path=args.install_path,
-            output_dir=args.output_dir,
-        )
-    except (ValueError, OSError) as exc:
-        print(exc, file=sys.stderr)
-        return 1
-    print(f"wrote {dest}")
-    return 0
-
-
 def main(argv: list[str] | None = None) -> int:
     """Entry point for the `libmagic-wheel` console script."""
     parser = argparse.ArgumentParser(prog="libmagic-wheel")
@@ -275,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="also wrap the compiled .mgc in an RPM named after --name "
         "(optional; everything else about the RPM uses build_rpm()'s "
-        "defaults -- use the separate `rpm` command for more control)",
+        "defaults)",
     )
 
     classify_cmd = sub.add_parser("classify", help="classify files, file(1)-like")
@@ -298,34 +277,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     classify_cmd.add_argument("paths", nargs="+", type=Path, help="files to classify")
 
-    rpm_cmd = sub.add_parser("rpm", help="wrap an already-compiled .mgc in an RPM")
-    rpm_cmd.add_argument("--mgc", type=Path, required=True, help="compiled .mgc database")
-    rpm_cmd.add_argument("--name", required=True, help="RPM name")
-    rpm_cmd.add_argument(
-        "--version",
-        default=None,
-        help="RPM version (default: current UTC timestamp, YYYYMMDDHHMM)",
-    )
-    rpm_cmd.add_argument("--release", default="1", help="RPM release (default: 1)")
-    rpm_cmd.add_argument("--license", default="Proprietary", help="RPM License field")
-    rpm_cmd.add_argument(
-        "--install-path",
-        default="/etc/libmagic-wheel/combined.mgc",
-        help="absolute path the .mgc is installed to on the target system "
-        "(default: /etc/libmagic-wheel/combined.mgc)",
-    )
-    rpm_cmd.add_argument(
-        "--output-dir", type=Path, default=Path.cwd(), help="where to write the built .rpm",
-    )
-
     args = parser.parse_args(argv)
 
     if args.command == "compile":
         return _run_compile(parser, args)
     if args.command == "classify":
         return _run_classify(args)
-    if args.command == "rpm":
-        return _run_rpm(args)
 
     return 1  # pragma: no cover - argparse enforces a valid command
 

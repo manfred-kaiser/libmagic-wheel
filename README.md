@@ -39,16 +39,26 @@ r.description, r.mime_type, r.extensions
 is safe to add.
 
 
-## Building a database
+## CLI
 
-The bundled default is unmodified upstream Magdir - for your own
-definitions, layer them on top, either from the shell:
+`libmagic-wheel` ships two subcommands; `--help` on either lists the
+full set of options.
+
+### `compile`
+
+Compiles a `.mgc` from the bundled upstream Magdir plus your own
+overrides/additions - a file matches a bundled fragment by name and
+replaces it, any other name is added as a new fragment:
 
 ```sh
 libmagic-wheel compile --override-dir ./our-definitions --output-dir /etc/libmagic-wheel
 ```
 
-or from Python:
+Add `--rpm` to also wrap the result in a minimal RPM in the same step,
+named after `--name` (the RPM's version defaults to the current UTC
+timestamp).
+
+The same thing from Python:
 
 ```python
 from libmagic import compile_database
@@ -56,25 +66,18 @@ from libmagic import compile_database
 mgc = compile_database(output_dir="/etc/libmagic-wheel")
 ```
 
+### `classify`
 
-## CLI
-
-`libmagic-wheel` ships three subcommands. `compile` is covered above;
-the other two:
+`file(1)`-like: description and mime type together, one line per file.
 
 ```sh
-# file(1)-like: description and mime type together, one line per file
 libmagic-wheel classify --mgc /etc/libmagic-wheel/combined.mgc some-file.pdf
-
-# wrap an already-compiled .mgc in a minimal RPM
-libmagic-wheel rpm --mgc /etc/libmagic-wheel/combined.mgc --name our-magic-db
 ```
 
-`classify` falls back to the bundled default `.mgc` if `--mgc` is
-omitted (development/debugging only). `compile --rpm` builds and wraps
-in one step, deriving the RPM name from `--name`. `--help` on any
-subcommand lists the rest of the options (RPM version/release/license,
-`--allow-compress-fork`, and so on).
+Falls back to the bundled default `.mgc` if `--mgc` is omitted
+(development/debugging only). `--uncompress` looks inside compressed
+files - see `Magic.__init__`'s docstring for why `--allow-compress-fork`
+is also needed before that actually decompresses anything.
 
 
 ## Django / Celery
