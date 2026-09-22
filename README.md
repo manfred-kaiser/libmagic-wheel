@@ -104,6 +104,7 @@ MAGIC = Magic(magic_file="/etc/libmagic-wheel/combined.mgc")
 from dataclasses import asdict
 from django.conf import settings
 
+
 def classify(data: bytes) -> dict:
     return asdict(settings.MAGIC.from_buffer(data))
 ```

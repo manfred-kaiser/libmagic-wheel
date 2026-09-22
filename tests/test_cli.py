@@ -25,7 +25,9 @@ def test_split_override_dir_separates_known_and_new(tmp_path: Path) -> None:
     assert [f.name for f in extra] == ["our-custom-fragment"]
 
 
-def test_compile_without_override_dir(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_compile_without_override_dir(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     exit_code = main(["compile", "--output-dir", str(tmp_path), "--name", "plain"])
 
     assert exit_code == 0
@@ -36,7 +38,9 @@ def test_compile_without_override_dir(tmp_path: Path, capsys: pytest.CaptureFixt
     assert "added" not in out
 
 
-def test_compile_with_override_dir(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_compile_with_override_dir(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     override_dir = tmp_path / "overrides"
     override_dir.mkdir()
     (override_dir / "pgp").write_text("0 string %PDF replaced-by-cli\n")
@@ -67,7 +71,8 @@ def test_compile_rejects_missing_override_dir(tmp_path: Path) -> None:
 
 
 def test_compile_with_rpm_reports_rpm_build_failure(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     # "bad name!" is a valid .mgc filename stem but fails build_rpm()'s
     # stricter RPM-name allowlist -- exercises the --rpm error path
@@ -82,7 +87,9 @@ def test_compile_with_rpm_reports_rpm_build_failure(
 
 
 def test_classify_with_explicit_mgc(
-    compiled_mgc: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+    compiled_mgc: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     sample = tmp_path / "sample.pdf"
     sample.write_bytes(PDF_BYTES)
@@ -96,7 +103,8 @@ def test_classify_with_explicit_mgc(
 
 
 def test_classify_without_mgc_uses_bundled_default(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     sample = tmp_path / "sample.pdf"
     sample.write_bytes(PDF_BYTES)
@@ -108,13 +116,17 @@ def test_classify_without_mgc_uses_bundled_default(
 
 
 def test_classify_reports_per_file_errors_and_continues(
-    compiled_mgc: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+    compiled_mgc: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     missing = tmp_path / "does-not-exist.pdf"
     sample = tmp_path / "sample.pdf"
     sample.write_bytes(PDF_BYTES)
 
-    exit_code = main(["classify", "--mgc", str(compiled_mgc), str(missing), str(sample)])
+    exit_code = main(
+        ["classify", "--mgc", str(compiled_mgc), str(missing), str(sample)]
+    )
 
     assert exit_code == 1
     captured = capsys.readouterr()
@@ -123,7 +135,8 @@ def test_classify_reports_per_file_errors_and_continues(
 
 
 def test_build_rpm_installs_to_the_given_path(
-    compiled_mgc: Path, tmp_path: Path,
+    compiled_mgc: Path,
+    tmp_path: Path,
 ) -> None:
     output_dir = tmp_path / "out"
 
@@ -137,29 +150,38 @@ def test_build_rpm_installs_to_the_given_path(
 
     assert dest.exists()
     listing = subprocess.run(
-        ["rpm", "-qlp", str(dest)], capture_output=True, text=True, check=True,
+        ["rpm", "-qlp", str(dest)],
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     assert listing.strip() == "/etc/libmagic-wheel-test/combined.mgc"
 
 
 def test_build_rpm_uses_current_utc_timestamp_when_version_omitted(
-    compiled_mgc: Path, tmp_path: Path,
+    compiled_mgc: Path,
+    tmp_path: Path,
 ) -> None:
     output_dir = tmp_path / "out"
 
     dest = build_rpm(
-        compiled_mgc, "libmagic-wheel-database-test", output_dir=output_dir,
+        compiled_mgc,
+        "libmagic-wheel-database-test",
+        output_dir=output_dir,
     )
 
     version = subprocess.run(
         ["rpm", "-qp", "--qf", "%{VERSION}", str(dest)],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     assert re.fullmatch(r"\d{12}", version)
 
 
 def test_compile_with_rpm_derives_rpm_name_from_name(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     exit_code = main(
         ["compile", "--output-dir", str(tmp_path), "--name", "combined", "--rpm"],
@@ -190,16 +212,20 @@ def test_build_rpm_rejects_missing_mgc(tmp_path: Path) -> None:
     ],
 )
 def test_build_rpm_rejects_unsafe_values(
-    compiled_mgc: Path, kwarg: str, value: str,
+    compiled_mgc: Path,
+    kwarg: str,
+    value: str,
 ) -> None:
-    kwargs = {"name": "libmagic-wheel-database-test", "version": "1.0"}
+    kwargs: dict[str, str] = {"name": "libmagic-wheel-database-test", "version": "1.0"}
     kwargs[kwarg] = value
     with pytest.raises(ValueError, match="invalid"):
-        build_rpm(compiled_mgc, **kwargs)
+        # kwargs never actually contains output_dir; mypy can't see that statically.
+        build_rpm(compiled_mgc, **kwargs)  # type: ignore[arg-type]
 
 
 def test_build_rpm_reports_missing_rpmbuild(
-    compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch,
+    compiled_mgc: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(shutil, "which", lambda _name: None)
     with pytest.raises(OSError, match="rpmbuild not found"):
@@ -207,7 +233,8 @@ def test_build_rpm_reports_missing_rpmbuild(
 
 
 def test_build_rpm_reports_unsafe_resolved_source_path(
-    compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch,
+    compiled_mgc: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(Path, "resolve", lambda self: Path("/tmp/evil;rm"))  # noqa: ARG005, S108
     with pytest.raises(ValueError, match="unsafe characters"):
@@ -215,24 +242,30 @@ def test_build_rpm_reports_unsafe_resolved_source_path(
 
 
 def test_build_rpm_reports_rpmbuild_failure(
-    compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch,
+    compiled_mgc: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
         subprocess,
         "run",
-        lambda *a, **k: subprocess.CompletedProcess(a, returncode=1, stdout="", stderr="boom"),  # noqa: ARG005
+        lambda *a, **_kwargs: subprocess.CompletedProcess(
+            a, returncode=1, stdout="", stderr="boom"
+        ),
     )
     with pytest.raises(OSError, match="rpmbuild failed"):
         build_rpm(compiled_mgc, "x", version="1.0")
 
 
 def test_build_rpm_reports_success_with_no_output_file(
-    compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch,
+    compiled_mgc: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
         subprocess,
         "run",
-        lambda *a, **k: subprocess.CompletedProcess(a, returncode=0, stdout="", stderr=""),  # noqa: ARG005
+        lambda *a, **_kwargs: subprocess.CompletedProcess(
+            a, returncode=0, stdout="", stderr=""
+        ),
     )
     with pytest.raises(OSError, match=r"produced no \.rpm"):
         build_rpm(compiled_mgc, "x", version="1.0")

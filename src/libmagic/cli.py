@@ -246,7 +246,10 @@ def main(argv: list[str] | None = None) -> int:
         "fragments",
     )
     compile_cmd.add_argument(
-        "--output-dir", type=Path, default=Path.cwd(), help="where to write <name>.mgc",
+        "--output-dir",
+        type=Path,
+        default=Path.cwd(),
+        help="where to write <name>.mgc",
     )
     compile_cmd.add_argument("--name", default="combined", help="output file base name")
     compile_cmd.add_argument(
@@ -266,7 +269,9 @@ def main(argv: list[str] | None = None) -> int:
         "one, for development/debugging only -- see the README)",
     )
     classify_cmd.add_argument(
-        "--uncompress", action="store_true", help="look inside compressed files (see README)",
+        "--uncompress",
+        action="store_true",
+        help="look inside compressed files (see README)",
     )
     classify_cmd.add_argument(
         "--allow-compress-fork",

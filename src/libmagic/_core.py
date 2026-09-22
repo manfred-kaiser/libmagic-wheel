@@ -135,7 +135,9 @@ def bundled_magdir() -> Path:
     """Directory holding the bundled, unmodified upstream Magdir fragments."""
     stack = ExitStack()
     return stack.enter_context(
-        importlib.resources.as_file(importlib.resources.files(_DATA_PACKAGE) / "magdir"),
+        importlib.resources.as_file(
+            importlib.resources.files(_DATA_PACKAGE) / "magdir"
+        ),
     )
 
 
@@ -147,7 +149,9 @@ def bundled_default_mgc() -> Path:
     """
     stack = ExitStack()
     return stack.enter_context(
-        importlib.resources.as_file(importlib.resources.files(_DATA_PACKAGE) / "default.mgc"),
+        importlib.resources.as_file(
+            importlib.resources.files(_DATA_PACKAGE) / "default.mgc"
+        ),
     )
 
 
@@ -253,7 +257,9 @@ class Magic:
         service, per the README) -- a forked decompressor then inherits
         that same sandbox rather than running fully unconstrained.
         """
-        self._path = Path(magic_file) if magic_file is not None else bundled_default_mgc()
+        self._path = (
+            Path(magic_file) if magic_file is not None else bundled_default_mgc()
+        )
         flags = MAGIC_ERROR
         if uncompress:
             flags |= MAGIC_COMPRESS
@@ -297,7 +303,9 @@ class Magic:
             self._local.identity = identity
         return cookie
 
-    def _classify(self, cookie: _Cookie, extra_flags: int, call: Callable[[], bytes | None]) -> str:
+    def _classify(
+        self, cookie: _Cookie, extra_flags: int, call: Callable[[], bytes | None]
+    ) -> str:
         if _lib.magic_setflags(cookie.value, self._base_flags | extra_flags) != 0:
             raise MagicError(_decode(_lib.magic_error(cookie.value)))
         result = call()
@@ -310,7 +318,9 @@ class Magic:
         cookie = self._current_cookie()
 
         def call() -> bytes | None:
-            return cast("bytes | None", _lib.magic_buffer(cookie.value, data, len(data)))
+            return cast(
+                "bytes | None", _lib.magic_buffer(cookie.value, data, len(data))
+            )
 
         return Classification(
             description=self._classify(cookie, MAGIC_NONE, call),

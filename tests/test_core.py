@@ -47,7 +47,9 @@ def test_magic_without_magic_file_uses_bundled_default() -> None:
     assert result.mime_type == "application/pdf"
 
 
-def test_cookie_del_guards_against_lib_being_none(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cookie_del_guards_against_lib_being_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     # Simulates the narrow interpreter-shutdown window where module globals
     # can already be cleared before a lingering _Cookie's __del__ runs --
     # calling __del__ directly (a plain method, nothing stops that) tests
@@ -83,7 +85,9 @@ def test_compile_database_replaces_known_fragment(tmp_path: Path) -> None:
     replacement = tmp_path / "pdf"
     replacement.write_text("0 string %PDF replaced-pdf-fragment\n")
     mgc = compile_database(
-        overrides={"pdf": replacement}, output_dir=tmp_path, output_name="replaced",
+        overrides={"pdf": replacement},
+        output_dir=tmp_path,
+        output_name="replaced",
     )
     m = Magic(magic_file=str(mgc))
     result = m.from_buffer(PDF_BYTES)
@@ -101,7 +105,8 @@ def test_compile_database_adds_extra_fragment(tmp_path: Path) -> None:
 
 
 def test_compile_database_default_output_dir(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.chdir(tmp_path)
     mgc = compile_database(output_name="cwd-default")
@@ -109,7 +114,8 @@ def test_compile_database_default_output_dir(
 
 
 def test_compile_database_propagates_compile_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(_core._lib, "magic_compile", lambda _cookie, _path: -1)
     monkeypatch.setattr(_core._lib, "magic_error", lambda _cookie: b"boom")
@@ -117,7 +123,9 @@ def test_compile_database_propagates_compile_failure(
         compile_database(output_dir=tmp_path)
 
 
-def test_compile_database_open_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_compile_database_open_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(_core._lib, "magic_open", lambda _flags: None)
     with pytest.raises(MagicError, match="magic_open"):
         compile_database(output_dir=tmp_path)
@@ -222,7 +230,8 @@ def test_from_file_with_non_utf8_path(compiled_mgc: Path, tmp_path: Path) -> Non
 
 
 def test_from_buffer_decodes_non_utf8_metadata_without_crashing(
-    compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch,
+    compiled_mgc: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # libmagic can return description text in the charset of the classified
     # file itself (e.g. a Word doc's title) -- not necessarily valid UTF-8.
@@ -235,7 +244,9 @@ def test_from_buffer_decodes_non_utf8_metadata_without_crashing(
     assert result.description == "bad-\\xff-utf8"
 
 
-def test_uncompress_flag_sets_compress_and_nofork(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_uncompress_flag_sets_compress_and_nofork(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     seen_flags: list[int] = []
 
     def _fake_magic_open(flags: int) -> int:
@@ -266,7 +277,9 @@ def test_allow_compress_fork_omits_nofork_flag(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(_core._lib, "magic_load", lambda _cookie, _path: 0)
     monkeypatch.setattr(_core._lib, "magic_close", lambda _cookie: None)
 
-    Magic(magic_file="irrelevant.mgc", uncompress=True, allow_compress_fork=True)._open_cookie()
+    Magic(
+        magic_file="irrelevant.mgc", uncompress=True, allow_compress_fork=True
+    )._open_cookie()
 
     assert seen_flags[-1] & _core.MAGIC_COMPRESS
     assert not seen_flags[-1] & _core.MAGIC_NO_COMPRESS_FORK
@@ -280,7 +293,8 @@ def test_missing_database_raises_clearly(tmp_path: Path) -> None:
 
 
 def test_transiently_missing_database_keeps_serving_cached_cookie(
-    compiled_mgc: Path, tmp_path: Path,
+    compiled_mgc: Path,
+    tmp_path: Path,
 ) -> None:
     live = tmp_path / "live.mgc"
     live.write_bytes(compiled_mgc.read_bytes())
@@ -303,7 +317,9 @@ def test_open_cookie_rejects_invalid_database(tmp_path: Path) -> None:
         m.from_buffer(TEXT_BYTES)
 
 
-def test_open_cookie_open_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_open_cookie_open_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     existing = tmp_path / "exists.mgc"
     existing.write_bytes(b"not actually loaded, magic_open is mocked first")
     monkeypatch.setattr(_core._lib, "magic_open", lambda _flags: None)
@@ -312,7 +328,9 @@ def test_open_cookie_open_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
         m.from_buffer(TEXT_BYTES)
 
 
-def test_classify_setflags_failure(compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_classify_setflags_failure(
+    compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     m = Magic(magic_file=str(compiled_mgc))
     m._current_cookie()
     monkeypatch.setattr(_core._lib, "magic_setflags", lambda _cookie, _flags: -1)
@@ -321,7 +339,9 @@ def test_classify_setflags_failure(compiled_mgc: Path, monkeypatch: pytest.Monke
         m.from_buffer(TEXT_BYTES)
 
 
-def test_classify_call_returns_none(compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_classify_call_returns_none(
+    compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     m = Magic(magic_file=str(compiled_mgc))
     m._current_cookie()
     monkeypatch.setattr(_core._lib, "magic_buffer", lambda _cookie, _buf, _len: None)
@@ -357,7 +377,8 @@ def test_no_reload_when_mtime_unchanged(compiled_mgc: Path) -> None:
 
 
 def test_reload_on_inode_change_even_with_identical_mtime(
-    compiled_mgc: Path, tmp_path: Path,
+    compiled_mgc: Path,
+    tmp_path: Path,
 ) -> None:
     # RPM upgrades with a pinned SOURCE_DATE_EPOCH deliver a replacement
     # file at an unchanged mtime (verified against real rpmbuild/rpm) --

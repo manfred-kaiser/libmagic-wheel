@@ -64,6 +64,7 @@ ignore = [
     "D213",    # multi-line-summary-second-line
     "E501",    # line too long
     "CPY001",  # no copyright-header convention decided for this project yet
+    "COM812",  # conflicts with the ruff formatter (ruff's own recommendation)
 ]
 
 [tool.ruff.lint.per-file-ignores]

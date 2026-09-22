@@ -47,9 +47,7 @@ def test_concurrent_classification_from_many_threads(compiled_mgc: Path) -> None
             with lock:
                 errors.append(exc)
 
-    threads = [
-        threading.Thread(target=worker, args=(i % 2 == 0,)) for i in range(16)
-    ]
+    threads = [threading.Thread(target=worker, args=(i % 2 == 0,)) for i in range(16)]
     for t in threads:
         t.start()
     for t in threads:
@@ -109,7 +107,8 @@ def test_thread_pool_executor_sustained_throughput(compiled_mgc: Path) -> None:
 
 
 def test_reload_races_against_concurrent_classification(
-    compiled_mgc: Path, tmp_path: Path,
+    compiled_mgc: Path,
+    tmp_path: Path,
 ) -> None:
     """Atomic .mgc replacement while other threads are actively classifying.
 
