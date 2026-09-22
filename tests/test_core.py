@@ -36,7 +36,13 @@ def test_bundled_magdir_contains_upstream_fragments() -> None:
 def test_bundled_default_mgc_is_loadable() -> None:
     mgc = bundled_default_mgc()
     assert mgc.exists()
-    m = Magic(str(mgc))
+    m = Magic(magic_file=str(mgc))
+    result = m.from_buffer(PDF_BYTES)
+    assert result.mime_type == "application/pdf"
+
+
+def test_magic_without_magic_file_uses_bundled_default() -> None:
+    m = Magic()
     result = m.from_buffer(PDF_BYTES)
     assert result.mime_type == "application/pdf"
 
@@ -79,7 +85,7 @@ def test_compile_database_replaces_known_fragment(tmp_path: Path) -> None:
     mgc = compile_database(
         overrides={"pdf": replacement}, output_dir=tmp_path, output_name="replaced",
     )
-    m = Magic(str(mgc))
+    m = Magic(magic_file=str(mgc))
     result = m.from_buffer(PDF_BYTES)
     # the replacement fragment's own description text, not upstream's PDF rule
     assert result.description == "replaced-pdf-fragment"
@@ -89,7 +95,7 @@ def test_compile_database_adds_extra_fragment(tmp_path: Path) -> None:
     extra = tmp_path / "my-custom-fragment"
     extra.write_text("0 string \\xCA\\xFE custom-magic-match\n")
     mgc = compile_database(extra=[extra], output_dir=tmp_path, output_name="extra")
-    m = Magic(str(mgc))
+    m = Magic(magic_file=str(mgc))
     result = m.from_buffer(b"\xca\xfe rest of file")
     assert result.description == "custom-magic-match"
 
@@ -118,7 +124,7 @@ def test_compile_database_open_failure(tmp_path: Path, monkeypatch: pytest.Monke
 
 
 def test_from_buffer_returns_classification(compiled_mgc: Path) -> None:
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     result = m.from_buffer(PDF_BYTES)
     assert isinstance(result, Classification)
     assert result.mime_type == "application/pdf"
@@ -126,20 +132,20 @@ def test_from_buffer_returns_classification(compiled_mgc: Path) -> None:
 
 
 def test_from_buffer_plain_text(compiled_mgc: Path) -> None:
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     result = m.from_buffer(TEXT_BYTES)
     assert result.mime_type.startswith("text/")
 
 
 def test_from_buffer_empty(compiled_mgc: Path) -> None:
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     result = m.from_buffer(b"")
     assert isinstance(result, Classification)
     assert result.description  # some non-empty classification, not a crash
 
 
 def test_from_buffer_single_byte(compiled_mgc: Path) -> None:
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     result = m.from_buffer(b"\x00")
     assert isinstance(result, Classification)
 
@@ -148,13 +154,13 @@ def test_from_buffer_large(compiled_mgc: Path) -> None:
     # 8 MiB of repeated plain text -- larger than any single internal
     # libmagic read-limit default, proving nothing chokes on size alone.
     data = (TEXT_BYTES * 400_000)[: 8 * 1024 * 1024]
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     result = m.from_buffer(data)
     assert result.mime_type.startswith("text/")
 
 
 def test_from_buffer_all_null_bytes(compiled_mgc: Path) -> None:
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     result = m.from_buffer(b"\x00" * 4096)
     assert isinstance(result, Classification)
 
@@ -170,7 +176,7 @@ def test_uncompress_without_allow_compress_fork_never_decompresses(
     # docstring and the README's security notes for the full reasoning.
     gzipped = gzip.compress(b"hello world, this is the payload\n" * 20)
 
-    m = Magic(str(compiled_mgc), uncompress=True)
+    m = Magic(magic_file=str(compiled_mgc), uncompress=True)
     result = m.from_buffer(gzipped)
 
     assert "Fork is required to uncompress, but disabled" in result.description
@@ -183,7 +189,7 @@ def test_uncompress_with_allow_compress_fork_actually_decompresses(
     inner = b"hello world, this is the payload\n" * 20
     gzipped = gzip.compress(inner)
 
-    m = Magic(str(compiled_mgc), uncompress=True, allow_compress_fork=True)
+    m = Magic(magic_file=str(compiled_mgc), uncompress=True, allow_compress_fork=True)
     result = m.from_buffer(gzipped)
 
     # The *inner* content's type, not the outer gzip wrapper's -- proves
@@ -195,7 +201,7 @@ def test_uncompress_with_allow_compress_fork_actually_decompresses(
 def test_from_file(compiled_mgc: Path, tmp_path: Path) -> None:
     sample = tmp_path / "sample.pdf"
     sample.write_bytes(PDF_BYTES)
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     result = m.from_file(str(sample))
     assert result.mime_type == "application/pdf"
 
@@ -209,7 +215,7 @@ def test_from_file_with_non_utf8_path(compiled_mgc: Path, tmp_path: Path) -> Non
     sample = tmp_path / bad_name
     sample.write_bytes(PDF_BYTES)
 
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     result = m.from_file(str(sample))
 
     assert result.mime_type == "application/pdf"
@@ -222,7 +228,7 @@ def test_from_buffer_decodes_non_utf8_metadata_without_crashing(
     # file itself (e.g. a Word doc's title) -- not necessarily valid UTF-8.
     # backslashreplace must keep this from raising UnicodeDecodeError.
     monkeypatch.setattr(_core._lib, "magic_buffer", lambda *_a, **_k: b"bad-\xff-utf8")
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
 
     result = m.from_buffer(TEXT_BYTES)
 
@@ -243,7 +249,7 @@ def test_uncompress_flag_sets_compress_and_nofork(monkeypatch: pytest.MonkeyPatc
     # the real native function with a bogus value. Mock that too.
     monkeypatch.setattr(_core._lib, "magic_close", lambda _cookie: None)
 
-    Magic("irrelevant.mgc", uncompress=True)._open_cookie()
+    Magic(magic_file="irrelevant.mgc", uncompress=True)._open_cookie()
 
     assert seen_flags[-1] & _core.MAGIC_COMPRESS
     assert seen_flags[-1] & _core.MAGIC_NO_COMPRESS_FORK
@@ -260,7 +266,7 @@ def test_allow_compress_fork_omits_nofork_flag(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(_core._lib, "magic_load", lambda _cookie, _path: 0)
     monkeypatch.setattr(_core._lib, "magic_close", lambda _cookie: None)
 
-    Magic("irrelevant.mgc", uncompress=True, allow_compress_fork=True)._open_cookie()
+    Magic(magic_file="irrelevant.mgc", uncompress=True, allow_compress_fork=True)._open_cookie()
 
     assert seen_flags[-1] & _core.MAGIC_COMPRESS
     assert not seen_flags[-1] & _core.MAGIC_NO_COMPRESS_FORK
@@ -268,7 +274,7 @@ def test_allow_compress_fork_omits_nofork_flag(monkeypatch: pytest.MonkeyPatch) 
 
 def test_missing_database_raises_clearly(tmp_path: Path) -> None:
     missing = tmp_path / "does-not-exist.mgc"
-    m = Magic(str(missing))
+    m = Magic(magic_file=str(missing))
     with pytest.raises(MagicError, match="magic database not found"):
         m.from_buffer(TEXT_BYTES)
 
@@ -278,7 +284,7 @@ def test_transiently_missing_database_keeps_serving_cached_cookie(
 ) -> None:
     live = tmp_path / "live.mgc"
     live.write_bytes(compiled_mgc.read_bytes())
-    m = Magic(str(live))
+    m = Magic(magic_file=str(live))
     m.from_buffer(TEXT_BYTES)  # establishes a cached cookie
     cached_cookie = m._local.cookie
 
@@ -292,7 +298,7 @@ def test_transiently_missing_database_keeps_serving_cached_cookie(
 def test_open_cookie_rejects_invalid_database(tmp_path: Path) -> None:
     garbage = tmp_path / "garbage.mgc"
     garbage.write_bytes(b"this is not a compiled magic database\n")
-    m = Magic(str(garbage))
+    m = Magic(magic_file=str(garbage))
     with pytest.raises(MagicError, match="magic_load"):
         m.from_buffer(TEXT_BYTES)
 
@@ -301,13 +307,13 @@ def test_open_cookie_open_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     existing = tmp_path / "exists.mgc"
     existing.write_bytes(b"not actually loaded, magic_open is mocked first")
     monkeypatch.setattr(_core._lib, "magic_open", lambda _flags: None)
-    m = Magic(str(existing))
+    m = Magic(magic_file=str(existing))
     with pytest.raises(MagicError, match="magic_open"):
         m.from_buffer(TEXT_BYTES)
 
 
 def test_classify_setflags_failure(compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     m._current_cookie()
     monkeypatch.setattr(_core._lib, "magic_setflags", lambda _cookie, _flags: -1)
     monkeypatch.setattr(_core._lib, "magic_error", lambda _cookie: b"setflags failed")
@@ -316,7 +322,7 @@ def test_classify_setflags_failure(compiled_mgc: Path, monkeypatch: pytest.Monke
 
 
 def test_classify_call_returns_none(compiled_mgc: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     m._current_cookie()
     monkeypatch.setattr(_core._lib, "magic_buffer", lambda _cookie, _buf, _len: None)
     monkeypatch.setattr(_core._lib, "magic_error", lambda _cookie: b"buffer failed")
@@ -327,7 +333,7 @@ def test_classify_call_returns_none(compiled_mgc: Path, monkeypatch: pytest.Monk
 def test_reload_on_mtime_change(compiled_mgc: Path, tmp_path: Path) -> None:
     live = tmp_path / "live.mgc"
     live.write_bytes(compiled_mgc.read_bytes())
-    m = Magic(str(live))
+    m = Magic(magic_file=str(live))
     m.from_buffer(TEXT_BYTES)
     first_cookie = m._local.cookie
 
@@ -343,7 +349,7 @@ def test_reload_on_mtime_change(compiled_mgc: Path, tmp_path: Path) -> None:
 
 
 def test_no_reload_when_mtime_unchanged(compiled_mgc: Path) -> None:
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     m.from_buffer(TEXT_BYTES)
     first_cookie = m._local.cookie
     m.from_buffer(TEXT_BYTES)

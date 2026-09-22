@@ -224,12 +224,16 @@ class Magic:
 
     def __init__(
         self,
-        magic_file: str,
         *,
+        magic_file: str | None = None,
         uncompress: bool = False,
         allow_compress_fork: bool = False,
     ) -> None:
         """Configure the database path and flags; nothing is loaded yet.
+
+        magic_file: defaults to the bundled unmodified-Magdir .mgc (see
+        bundled_default_mgc()) if omitted -- pass your own compiled
+        database's path for a real deployment.
 
         allow_compress_fork: libmagic's MAGIC_NO_COMPRESS_FORK is not a
         selective "block only external tools" switch -- verified against
@@ -244,7 +248,7 @@ class Magic:
         service, per the README) -- a forked decompressor then inherits
         that same sandbox rather than running fully unconstrained.
         """
-        self._path = Path(magic_file)
+        self._path = Path(magic_file) if magic_file is not None else bundled_default_mgc()
         flags = MAGIC_ERROR
         if uncompress:
             flags |= MAGIC_COMPRESS

@@ -23,15 +23,21 @@ whatever version the host distro happens to provide.
 ## Usage
 
 A bundled, unmodified-Magdir `.mgc` ships with the package, so this works
-right away, no build step needed:
+right away, no build step needed - `Magic()` with no arguments loads it:
 
 ```python
-from libmagic import Magic, bundled_default_mgc
+from libmagic import Magic
 
-m = Magic(str(bundled_default_mgc()))
+m = Magic()
 
 r = m.from_buffer(sample_bytes)
 r.description, r.mime_type, r.extensions
+```
+
+Pass your own compiled database via the keyword-only `magic_file`:
+
+```python
+m = Magic(magic_file="/etc/libmagic-wheel/combined.mgc")
 ```
 
 `uncompress=True` alone never decompresses anything - see
@@ -90,7 +96,7 @@ only exposes uppercase names via `django.conf.settings`):
 # settings.py
 from libmagic import Magic
 
-MAGIC = Magic("/etc/libmagic-wheel/combined.mgc")
+MAGIC = Magic(magic_file="/etc/libmagic-wheel/combined.mgc")
 ```
 
 ```python

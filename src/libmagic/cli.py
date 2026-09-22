@@ -33,7 +33,6 @@ from pathlib import Path
 from ._core import (
     Magic,
     MagicError,
-    bundled_default_mgc,
     bundled_magdir,
     compile_database,
 )
@@ -215,9 +214,10 @@ def _run_compile(parser: argparse.ArgumentParser, args: argparse.Namespace) -> i
 
 
 def _run_classify(args: argparse.Namespace) -> int:
-    mgc = args.mgc if args.mgc is not None else bundled_default_mgc()
     magic = Magic(
-        str(mgc), uncompress=args.uncompress, allow_compress_fork=args.allow_compress_fork,
+        magic_file=str(args.mgc) if args.mgc is not None else None,
+        uncompress=args.uncompress,
+        allow_compress_fork=args.allow_compress_fork,
     )
     exit_code = 0
     for path in args.paths:

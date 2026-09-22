@@ -28,7 +28,7 @@ def test_concurrent_classification_from_many_threads(compiled_mgc: Path) -> None
     must get the classification matching what it actually submitted, even
     though all threads share the same Magic object and its _base_flags.
     """
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     iterations = 200
     errors: list[BaseException] = []
     lock = threading.Lock()
@@ -73,7 +73,7 @@ def test_high_thread_churn_does_not_crash(compiled_mgc: Path) -> None:
     caught while building this fix (a bogus cookie reaching a real
     magic_close in a different, mocked test).
     """
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     errors: list[BaseException] = []
     lock = threading.Lock()
 
@@ -95,7 +95,7 @@ def test_high_thread_churn_does_not_crash(compiled_mgc: Path) -> None:
 
 def test_thread_pool_executor_sustained_throughput(compiled_mgc: Path) -> None:
     """A ThreadPoolExecutor, the shape real web/task frameworks actually use."""
-    m = Magic(str(compiled_mgc))
+    m = Magic(magic_file=str(compiled_mgc))
     samples = [PDF_BYTES, TEXT_BYTES] * 250
 
     def classify(data: bytes) -> str:
@@ -120,7 +120,7 @@ def test_reload_races_against_concurrent_classification(
     """
     live = tmp_path / "live.mgc"
     live.write_bytes(compiled_mgc.read_bytes())
-    m = Magic(str(live))
+    m = Magic(magic_file=str(live))
 
     stop = threading.Event()
     errors: list[BaseException] = []
