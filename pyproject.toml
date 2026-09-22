@@ -73,9 +73,9 @@ ignore = [
     "SLF001",  # white-box tests deliberately reach into private state
     "PLR2004", # literal comparisons against sample bytes are the point
     "S603",    # subprocess calls here use fixed, developer-written argv only
-    "S607",    # same -- no untrusted input reaches these
-    "FBT001",  # positional bool test-helper params are fine in test code
-    "FBT002",  # same
+    "S607",    # commands here are resolved from PATH intentionally (e.g. "rpm"), not attacker-controlled
+    "FBT001",  # positional bool params on test helpers are fine, unlike on public API
+    "FBT002",  # same distinction, for the defaulted-bool-parameter variant of the rule
 ]
 "src/libmagic/cli.py" = [
     "T201",    # print() is the CLI's actual output, not a stray debug print
