@@ -4,11 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "libmagic-wheel"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "A specific, pinned libmagic version bundled as a wheel, for our own applications where the distro's version is too old to read newer .mgc databases"
 requires-python = "==3.13.*"
 license = "BSD-2-Clause"
 license-files = ["LICENSE.file-upstream"]
+
+[project.urls]
+Homepage = "https://github.com/manfred-kaiser/libmagic-wheel"
+Changelog = "https://github.com/manfred-kaiser/libmagic-wheel/blob/main/CHANGELOG.md"
+Source = "https://github.com/manfred-kaiser/libmagic-wheel"
+Tracker = "https://github.com/manfred-kaiser/libmagic-wheel/issues"
 
 [project.scripts]
 libmagic-wheel = "libmagic.cli:main"
@@ -74,3 +80,22 @@ ignore = [
 "src/libmagic/cli.py" = [
     "T201",    # print() is the CLI's actual output, not a stray debug print
 ]
+
+[tool.bumpversion]
+current_version = "0.1.0"
+
+[[tool.bumpversion.files]]
+filename = "src/libmagic/__init__.py"
+
+[[tool.bumpversion.files]]
+filename = "CHANGELOG.md"
+search = "[Unreleased]: https://github.com/manfred-kaiser/libmagic-wheel/compare/{current_version}...main"
+replace = """[Unreleased]: https://github.com/manfred-kaiser/libmagic-wheel/compare/{new_version}...main
+[{new_version}]: https://github.com/manfred-kaiser/libmagic-wheel/compare/{current_version}...{new_version}"""
+
+[[tool.bumpversion.files]]
+filename = "CHANGELOG.md"
+search = "## [Unreleased]"
+replace = """## [Unreleased]
+
+## [{new_version}] - {now:%Y-%m-%d}"""

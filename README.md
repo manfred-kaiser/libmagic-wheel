@@ -57,6 +57,26 @@ mgc = compile_database(output_dir="/etc/libmagic-wheel")
 ```
 
 
+## CLI
+
+`libmagic-wheel` ships three subcommands. `compile` is covered above;
+the other two:
+
+```sh
+# file(1)-like: description and mime type together, one line per file
+libmagic-wheel classify --mgc /etc/libmagic-wheel/combined.mgc some-file.pdf
+
+# wrap an already-compiled .mgc in a minimal RPM
+libmagic-wheel rpm --mgc /etc/libmagic-wheel/combined.mgc --name our-magic-db
+```
+
+`classify` falls back to the bundled default `.mgc` if `--mgc` is
+omitted (development/debugging only). `compile --rpm` builds and wraps
+in one step, deriving the RPM name from `--name`. `--help` on any
+subcommand lists the rest of the options (RPM version/release/license,
+`--allow-compress-fork`, and so on).
+
+
 ## Django / Celery
 
 `Magic.__init__` does no I/O, so a plain module-level instance is enough
