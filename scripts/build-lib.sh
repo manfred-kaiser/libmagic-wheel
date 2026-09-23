@@ -27,11 +27,16 @@ git clone --quiet --branch "$FILE_VERSION" --depth 1 \
     https://github.com/file/file.git "$BUILD_DIR/file-src"
 cd "$BUILD_DIR/file-src"
 
+# --disable-libseccomp: the file CLI's own sandboxing (seccomp.c) is
+# compiled into the file binary only, never into libmagic.so, so it buys
+# us nothing here -- disabling it also avoids a real portability problem
+# (seccomp.c references syscall-number defines that depend on kernel
+# headers newer than some build environments ship).
 autoreconf -fiv
 ./configure \
     --prefix="$BUILD_DIR/install" \
     --libdir="$BUILD_DIR/install/lib64" \
-    --enable-shared --disable-static
+    --enable-shared --disable-static --disable-libseccomp
 make -j"$(nproc)"
 make check
 

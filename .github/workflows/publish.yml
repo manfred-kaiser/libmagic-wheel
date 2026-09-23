@@ -11,11 +11,9 @@ jobs:
     steps:
       - name: Install build dependencies
         run: |
-          dnf install -y 'dnf-command(config-manager)'
-          dnf config-manager --set-enabled ubi-9-codeready-builder
           dnf install -y --setopt=install_weak_deps=False \
-            git gcc make autoconf automake libtool gettext-devel \
-            zlib-devel bzip2-devel xz-devel libseccomp-devel
+            git gcc make autoconf automake libtool gettext \
+            zlib-devel bzip2-devel xz-devel
       - uses: actions/checkout@v4
       - name: Build libmagic.so + stage Magdir fragments
         run: scripts/build-lib.sh
