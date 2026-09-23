@@ -24,6 +24,7 @@ jobs:
             src/libmagic/data/libmagic.so.1
             src/libmagic/data/magdir/
             src/libmagic/data/default.mgc
+            src/libmagic/_upstream_version.py
             LICENSE.file-upstream
 
   lint:
