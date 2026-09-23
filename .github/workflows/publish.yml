@@ -5,9 +5,11 @@ on:
     types: [published]
 
 jobs:
+  # See ci.yml for why manylinux_2_28 (not an arbitrary/newer-glibc image)
+  # is the build container.
   build-lib:
     runs-on: ubuntu-latest
-    container: registry.access.redhat.com/ubi9/ubi
+    container: quay.io/pypa/manylinux_2_28_x86_64
     steps:
       - name: Install build dependencies
         run: |

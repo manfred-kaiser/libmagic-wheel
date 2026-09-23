@@ -7,14 +7,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Builds libmagic.so against RHEL9's glibc baseline (the actual deployment
-  # target) from the version pinned in scripts/build-lib.sh, plus stages the
-  # Magdir fragments. Every other job consumes this as an artifact instead
-  # of rebuilding it, so the pinned upstream source is compiled exactly
-  # once per run.
+  # Builds libmagic.so inside the official manylinux_2_28 image (glibc 2.28)
+  # from the version pinned in scripts/build-lib.sh, plus stages the Magdir
+  # fragments. glibc's backwards compatibility means this baseline still
+  # runs fine on our actual RHEL9 deployment target (glibc 2.34) while also
+  # installing on much older/broader distros -- building in an arbitrary,
+  # newer-glibc image and relabeling the result after the fact would not.
+  # Every other job consumes this as an artifact instead of rebuilding it,
+  # so the pinned upstream source is compiled exactly once per run.
   build-lib:
     runs-on: ubuntu-latest
-    container: registry.access.redhat.com/ubi9/ubi
+    container: quay.io/pypa/manylinux_2_28_x86_64
     steps:
       - name: Install build dependencies
         run: |
