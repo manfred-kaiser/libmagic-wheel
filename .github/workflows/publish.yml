@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Install build dependencies
         run: |
+          dnf install -y 'dnf-command(config-manager)'
+          dnf config-manager --set-enabled ubi-9-codeready-builder
           dnf install -y --setopt=install_weak_deps=False \
             git gcc make autoconf automake libtool gettext-devel \
             zlib-devel bzip2-devel xz-devel libseccomp-devel
