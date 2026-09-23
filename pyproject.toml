@@ -5,10 +5,31 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "libmagic-wheel"
 version = "0.1.0"
+authors = [
+    {name = "SSH-MITM Dev-Team", email = "support@ssh-mitm.at"}
+]
+maintainers = [
+    {name = "Manfred Kaiser", email = "manfred.kaiser@ssh-mitm.at"}
+]
 description = "A specific, pinned libmagic version bundled as a wheel, for our own applications where the distro's version is too old to read newer .mgc databases"
+readme = "README.md"
 requires-python = ">=3.13"
-license = "BSD-2-Clause"
-license-files = ["LICENSE.file-upstream"]
+license = "Apache-2.0"
+license-files = ["LICENSE", "LICENSE.file-upstream"]
+keywords = [
+    "libmagic",
+    "magic",
+    "file-type",
+    "mime",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Filesystems",
+    "Development Status :: 4 - Beta",
+]
 
 [project.urls]
 Homepage = "https://github.com/manfred-kaiser/libmagic-wheel"

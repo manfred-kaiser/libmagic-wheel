@@ -16,12 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     container: registry.access.redhat.com/ubi9/ubi
     steps:
+      - name: Diagnose repo/package availability (temporary)
+        run: |
+          dnf repolist all
+          dnf provides '*/autopoint' || true
+          dnf search gettext || true
       - name: Install build dependencies
         run: |
-          dnf install -y 'dnf-command(config-manager)'
-          dnf config-manager --set-enabled ubi-9-codeready-builder
           dnf install -y --setopt=install_weak_deps=False \
-            git gcc make autoconf automake libtool gettext-devel \
+            git gcc make autoconf automake libtool gettext \
             zlib-devel bzip2-devel xz-devel libseccomp-devel
       - uses: actions/checkout@v4
       - name: Build libmagic.so + stage Magdir fragments
