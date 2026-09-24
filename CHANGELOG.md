@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `compile --rpm` now installs the database at `/etc/libmagic-wheel/<name>.mgc` instead of always `combined.mgc`, regardless of `--name`
+
+### Added
+
+- `compile --rpm-name` to set the RPM package name independently of `--name`
+
 ## [0.1.0] - 2026-09-23
 
 ### Added
