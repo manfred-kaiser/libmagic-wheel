@@ -10,7 +10,7 @@ from ._core import (
 )
 from ._upstream_version import UPSTREAM_VERSION
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "UPSTREAM_VERSION",
