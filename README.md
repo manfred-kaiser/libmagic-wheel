@@ -47,8 +47,8 @@ is safe to add.
 
 ## CLI
 
-`libmagic-wheel` ships two subcommands; `--help` on either lists the
-full set of options.
+`libmagic-wheel` ships three subcommands; `--help` on any of them lists
+the full set of options.
 
 ### `compile`
 
@@ -88,6 +88,19 @@ Falls back to the bundled default `.mgc` if `--mgc` is omitted
 (development/debugging only). `--uncompress` looks inside compressed
 files - see `Magic.__init__`'s docstring for why `--allow-compress-fork`
 is also needed before that actually decompresses anything.
+
+### `diff`
+
+Side-by-side comparison of override files against the bundled Magdir
+fragments they'd replace, so you can review what a `compile` would
+actually change first:
+
+```sh
+libmagic-wheel diff --override-dir ./our-definitions
+```
+
+Uses the system `diff` binary (`diff -y`) - no extra dependency just
+for this.
 
 
 ## Django / Celery

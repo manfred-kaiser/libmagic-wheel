@@ -1,4 +1,4 @@
-"""CLI entry point: compile a .mgc, and classify files with it.
+"""CLI entry point: compile a .mgc, classify files with it, or diff overrides.
 
 compile: every file placed in --override-dir is applied 1:1:
   - its name matches a bundled Magdir fragment -> replaces that fragment
@@ -23,6 +23,11 @@ compile: every file placed in --override-dir is applied 1:1:
 
 classify: prints "path: description (mime_type)" per file, like file(1),
 but always both fields together rather than picking one via a flag.
+
+diff: side-by-side (`diff -y`) comparison of each override file against
+the bundled Magdir fragment it would replace, so you can review what a
+compile would actually change before running it. Uses the system
+`diff` binary -- no extra dependency just for this.
 """
 
 from __future__ import annotations
@@ -231,6 +236,36 @@ def _run_compile(parser: argparse.ArgumentParser, args: argparse.Namespace) -> i
     return 0
 
 
+def _run_diff(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    if not args.override_dir.is_dir():
+        parser.error(f"--override-dir not found: {args.override_dir}")
+
+    diff_bin = shutil.which("diff")
+    if diff_bin is None:
+        print("diff not found on PATH", file=sys.stderr)
+        return 1
+
+    overrides, extra = _split_override_dir(args.override_dir)
+    for extra_file in extra:
+        print(
+            f"{extra_file.name}: new fragment, no bundled original to compare against"
+        )
+
+    exit_code = 0
+    for fragment_name, override in sorted(overrides.items()):
+        bundled = bundled_magdir() / fragment_name
+        print(f"=== {fragment_name} ===")
+        result = subprocess.run(  # noqa: S603 - resolved executable, fixed argv, no shell
+            [diff_bin, "-y", str(bundled), str(override)],
+            check=False,
+        )
+        # exit 1 just means "they differ", the normal/expected case here --
+        # only >1 (e.g. a file it couldn't read) is a real diff failure.
+        if result.returncode > 1:
+            exit_code = 1
+    return exit_code
+
+
 def _run_classify(args: argparse.Namespace) -> int:
     magic = Magic(
         magic_file=str(args.mgc) if args.mgc is not None else None,
@@ -312,12 +347,25 @@ def main(argv: list[str] | None = None) -> int:
     )
     classify_cmd.add_argument("paths", nargs="+", type=Path, help="files to classify")
 
+    diff_cmd = sub.add_parser(
+        "diff",
+        help="side-by-side diff of override files against the bundled originals",
+    )
+    diff_cmd.add_argument(
+        "--override-dir",
+        type=Path,
+        required=True,
+        help="folder of magic source files, as passed to compile --override-dir",
+    )
+
     args = parser.parse_args(argv)
 
     if args.command == "compile":
         return _run_compile(parser, args)
     if args.command == "classify":
         return _run_classify(args)
+    if args.command == "diff":
+        return _run_diff(parser, args)
 
     return 1  # pragma: no cover - argparse enforces a valid command
 

@@ -25,6 +25,66 @@ def test_split_override_dir_separates_known_and_new(tmp_path: Path) -> None:
     assert [f.name for f in extra] == ["our-custom-fragment"]
 
 
+def test_diff_shows_known_fragments_side_by_side(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "pgp").write_text("0 string %PDF our-custom-replacement\n")
+
+    exit_code = main(["diff", "--override-dir", str(tmp_path)])
+
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert "=== pgp ===" in out
+
+
+def test_diff_reports_new_fragments_without_diffing(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "our-custom-fragment").write_text("# a new fragment\n")
+
+    exit_code = main(["diff", "--override-dir", str(tmp_path)])
+
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert "our-custom-fragment: new fragment" in out
+    assert "===" not in out
+
+
+def test_diff_rejects_missing_override_dir(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit):
+        main(["diff", "--override-dir", str(tmp_path / "nope")])
+
+
+def test_diff_reports_missing_diff_binary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / "pgp").write_text("irrelevant\n")
+    monkeypatch.setattr(shutil, "which", lambda _name: None)
+
+    exit_code = main(["diff", "--override-dir", str(tmp_path)])
+
+    assert exit_code == 1
+
+
+def test_diff_reports_real_diff_failures(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / "pgp").write_text("irrelevant\n")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(a, returncode=2),  # noqa: ARG005
+    )
+
+    exit_code = main(["diff", "--override-dir", str(tmp_path)])
+
+    assert exit_code == 1
+
+
 def test_compile_without_override_dir(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

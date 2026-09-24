@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `compile --rpm-name` to set the RPM package name independently of `--name`
+- `compile --install-path` to set the RPM's install path independently of `--name`
+- `diff` subcommand: side-by-side comparison of override files against the bundled Magdir fragments they'd replace
 
 ## [0.1.0] - 2026-09-23
 
