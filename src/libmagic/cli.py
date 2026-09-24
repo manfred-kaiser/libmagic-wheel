@@ -3,16 +3,22 @@
 compile: every file placed in --override-dir is applied 1:1:
   - its name matches a bundled Magdir fragment -> replaces that fragment
   - its name matches nothing bundled              -> added as a new fragment
-  Pass --rpm to also wrap the freshly compiled .mgc in an RPM named after
-  --name, in the same step -- entirely optional, the compile itself never
-  requires rpmbuild. The RPM's version defaults to the current UTC
-  timestamp (there's no meaningful "next version" to derive otherwise --
-  a database rebuilt from unchanged inputs is still a new build); name,
-  version, release, license, and install path are all validated against
-  strict allowlists before ever touching the generated spec file --
-  rpmbuild's %install and %files sections are executed as real shell
-  script by rpmbuild itself, so an unvalidated value there is a
-  spec/shell injection vector, not just a formatting concern.
+  Pass --rpm to also wrap the freshly compiled .mgc in an RPM, in the
+  same step -- entirely optional, the compile itself never requires
+  rpmbuild. The RPM always installs the database as
+  /etc/libmagic-wheel/<name>.mgc, so differently-named databases don't
+  collide with each other on the same system; the RPM *package* name
+  defaults to the same --name but can be set independently via
+  --rpm-name, e.g. to match an existing internal package-naming scheme
+  without changing where the file actually ends up. The RPM's version
+  defaults to the current UTC timestamp (there's no meaningful "next
+  version" to derive otherwise -- a database rebuilt from unchanged
+  inputs is still a new build); name, version, release, license, and
+  install path are all validated against strict allowlists before ever
+  touching the generated spec file -- rpmbuild's %install and %files
+  sections are executed as real shell script by rpmbuild itself, so an
+  unvalidated value there is a spec/shell injection vector, not just a
+  formatting concern.
 
 classify: prints "path: description (mime_type)" per file, like file(1),
 but always both fields together rather than picking one via a flag.
@@ -203,8 +209,14 @@ def _run_compile(parser: argparse.ArgumentParser, args: argparse.Namespace) -> i
         print(f"added {len(extra)} new fragment(s): {sorted(f.name for f in extra)}")
 
     if args.rpm:
+        rpm_name = args.rpm_name if args.rpm_name is not None else args.name
         try:
-            rpm_path = build_rpm(dest, args.name, output_dir=args.output_dir)
+            rpm_path = build_rpm(
+                dest,
+                rpm_name,
+                install_path=f"/etc/libmagic-wheel/{args.name}.mgc",
+                output_dir=args.output_dir,
+            )
         except (ValueError, OSError) as exc:
             print(f"RPM build failed: {exc}", file=sys.stderr)
             return 1
@@ -255,9 +267,16 @@ def main(argv: list[str] | None = None) -> int:
     compile_cmd.add_argument(
         "--rpm",
         action="store_true",
-        help="also wrap the compiled .mgc in an RPM named after --name "
-        "(optional; everything else about the RPM uses build_rpm()'s "
-        "defaults)",
+        help="also wrap the compiled .mgc in an RPM, installed as "
+        "/etc/libmagic-wheel/<name>.mgc (optional; everything else about "
+        "the RPM uses build_rpm()'s defaults)",
+    )
+    compile_cmd.add_argument(
+        "--rpm-name",
+        default=None,
+        help="RPM package name, if it should differ from --name (default: "
+        "same as --name; only the installed .mgc path is always "
+        "derived from --name, regardless of this)",
     )
 
     classify_cmd = sub.add_parser("classify", help="classify files, file(1)-like")

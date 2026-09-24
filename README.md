@@ -61,8 +61,11 @@ libmagic-wheel compile --override-dir ./our-definitions --output-dir /etc/libmag
 ```
 
 Add `--rpm` to also wrap the result in a minimal RPM in the same step,
-named after `--name` (the RPM's version defaults to the current UTC
-timestamp).
+installed as `/etc/libmagic-wheel/<name>.mgc` (the RPM's version
+defaults to the current UTC timestamp). The RPM *package* name matches
+`--name` too unless overridden with `--rpm-name` - useful if it needs
+to match an existing naming scheme without changing where the file
+ends up.
 
 The same thing from Python:
 

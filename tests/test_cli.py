@@ -195,6 +195,64 @@ def test_compile_with_rpm_derives_rpm_name_from_name(
     assert str(rpms[0]) in out
 
 
+def test_compile_with_rpm_installs_at_a_name_derived_path(tmp_path: Path) -> None:
+    # A non-default --name must show up in the installed path too, not
+    # just the package name -- otherwise two differently-named databases
+    # would silently collide at the same /etc/libmagic-wheel/combined.mgc.
+    exit_code = main(
+        ["compile", "--output-dir", str(tmp_path), "--name", "mytest", "--rpm"],
+    )
+
+    assert exit_code == 0
+    rpms = list(tmp_path.glob("mytest-*.rpm"))
+    assert len(rpms) == 1
+
+    listing = subprocess.run(
+        ["rpm", "-qlp", str(rpms[0])],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert listing.strip() == "/etc/libmagic-wheel/mytest.mgc"
+
+
+def test_compile_with_rpm_name_overrides_package_name_only(tmp_path: Path) -> None:
+    # --rpm-name changes the RPM's own package identity but must leave
+    # the installed .mgc path derived from --name, not --rpm-name.
+    exit_code = main(
+        [
+            "compile",
+            "--output-dir",
+            str(tmp_path),
+            "--name",
+            "mytest",
+            "--rpm",
+            "--rpm-name",
+            "acme-magic-db",
+        ],
+    )
+
+    assert exit_code == 0
+    rpms = list(tmp_path.glob("acme-magic-db-*.rpm"))
+    assert len(rpms) == 1
+
+    queried_name = subprocess.run(
+        ["rpm", "-qp", "--qf", "%{NAME}", str(rpms[0])],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert queried_name == "acme-magic-db"
+
+    listing = subprocess.run(
+        ["rpm", "-qlp", str(rpms[0])],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert listing.strip() == "/etc/libmagic-wheel/mytest.mgc"
+
+
 def test_build_rpm_rejects_missing_mgc(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="not found"):
         build_rpm(tmp_path / "nope.mgc", "x", version="1.0")
