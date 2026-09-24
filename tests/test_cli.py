@@ -253,6 +253,43 @@ def test_compile_with_rpm_name_overrides_package_name_only(tmp_path: Path) -> No
     assert listing.strip() == "/etc/libmagic-wheel/mytest.mgc"
 
 
+def test_compile_with_install_path_overrides_default_path_only(tmp_path: Path) -> None:
+    # --install-path changes where the .mgc lands but must leave the RPM
+    # package name derived from --name, not from the install path.
+    exit_code = main(
+        [
+            "compile",
+            "--output-dir",
+            str(tmp_path),
+            "--name",
+            "mytest",
+            "--rpm",
+            "--install-path",
+            "/etc/myapp/magic.mgc",
+        ],
+    )
+
+    assert exit_code == 0
+    rpms = list(tmp_path.glob("mytest-*.rpm"))
+    assert len(rpms) == 1
+
+    queried_name = subprocess.run(
+        ["rpm", "-qp", "--qf", "%{NAME}", str(rpms[0])],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert queried_name == "mytest"
+
+    listing = subprocess.run(
+        ["rpm", "-qlp", str(rpms[0])],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert listing.strip() == "/etc/myapp/magic.mgc"
+
+
 def test_build_rpm_rejects_missing_mgc(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="not found"):
         build_rpm(tmp_path / "nope.mgc", "x", version="1.0")

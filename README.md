@@ -60,12 +60,13 @@ replaces it, any other name is added as a new fragment:
 libmagic-wheel compile --override-dir ./our-definitions --output-dir /etc/libmagic-wheel
 ```
 
-Add `--rpm` to also wrap the result in a minimal RPM in the same step,
-installed as `/etc/libmagic-wheel/<name>.mgc` (the RPM's version
-defaults to the current UTC timestamp). The RPM *package* name matches
-`--name` too unless overridden with `--rpm-name` - useful if it needs
-to match an existing naming scheme without changing where the file
-ends up.
+Add `--rpm` to also wrap the result in a minimal RPM in the same step
+(the RPM's version defaults to the current UTC timestamp). By default,
+both the RPM *package* name and the path it installs to derive from
+`--name` (`/etc/libmagic-wheel/<name>.mgc`) - override either
+independently with `--rpm-name` or `--install-path`, e.g. to match an
+existing naming scheme without changing where the file ends up, or
+vice versa.
 
 The same thing from Python:
 

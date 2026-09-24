@@ -5,12 +5,13 @@ compile: every file placed in --override-dir is applied 1:1:
   - its name matches nothing bundled              -> added as a new fragment
   Pass --rpm to also wrap the freshly compiled .mgc in an RPM, in the
   same step -- entirely optional, the compile itself never requires
-  rpmbuild. The RPM always installs the database as
+  rpmbuild. By default the RPM installs the database as
   /etc/libmagic-wheel/<name>.mgc, so differently-named databases don't
-  collide with each other on the same system; the RPM *package* name
-  defaults to the same --name but can be set independently via
-  --rpm-name, e.g. to match an existing internal package-naming scheme
-  without changing where the file actually ends up. The RPM's version
+  collide with each other on the same system, and the RPM *package*
+  name matches --name too -- both can be overridden independently
+  (--install-path, --rpm-name), e.g. to match an existing internal
+  naming scheme without changing where the file actually ends up, or
+  vice versa. The RPM's version
   defaults to the current UTC timestamp (there's no meaningful "next
   version" to derive otherwise -- a database rebuilt from unchanged
   inputs is still a new build); name, version, release, license, and
@@ -210,11 +211,16 @@ def _run_compile(parser: argparse.ArgumentParser, args: argparse.Namespace) -> i
 
     if args.rpm:
         rpm_name = args.rpm_name if args.rpm_name is not None else args.name
+        install_path = (
+            args.install_path
+            if args.install_path is not None
+            else f"/etc/libmagic-wheel/{args.name}.mgc"
+        )
         try:
             rpm_path = build_rpm(
                 dest,
                 rpm_name,
-                install_path=f"/etc/libmagic-wheel/{args.name}.mgc",
+                install_path=install_path,
                 output_dir=args.output_dir,
             )
         except (ValueError, OSError) as exc:
@@ -274,9 +280,14 @@ def main(argv: list[str] | None = None) -> int:
     compile_cmd.add_argument(
         "--rpm-name",
         default=None,
-        help="RPM package name, if it should differ from --name (default: "
-        "same as --name; only the installed .mgc path is always "
-        "derived from --name, regardless of this)",
+        help="RPM package name, if it should differ from --name "
+        "(default: same as --name)",
+    )
+    compile_cmd.add_argument(
+        "--install-path",
+        default=None,
+        help="absolute path the .mgc is installed to on the target system "
+        "(default: /etc/libmagic-wheel/<name>.mgc)",
     )
 
     classify_cmd = sub.add_parser("classify", help="classify files, file(1)-like")
