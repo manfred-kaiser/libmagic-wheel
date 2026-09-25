@@ -54,6 +54,7 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
+"libmagic" = ["py.typed"]
 "libmagic.data" = ["libmagic.so.1", "magdir/*", "default.mgc"]
 
 [tool.pytest.ini_options]

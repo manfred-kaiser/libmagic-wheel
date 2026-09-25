@@ -5,7 +5,7 @@ from __future__ import annotations
 import gzip
 import os
 import time
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
@@ -21,9 +21,6 @@ from libmagic import (
 )
 
 from .conftest import PDF_BYTES, TEXT_BYTES
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_bundled_magdir_contains_upstream_fragments() -> None:
@@ -57,6 +54,13 @@ def test_cookie_del_guards_against_lib_being_none(
     cookie = _core._Cookie(1)
     monkeypatch.setattr(_core, "_lib", None)
     cookie.__del__()  # must not raise even though _lib is gone
+
+
+def test_py_typed_marker_is_present() -> None:
+    # PEP 561: without this file, external type checkers (mypy, pyright)
+    # ignore our type hints entirely and treat every import as Any --
+    # verified against a real installed wheel, not just asserted here.
+    assert (Path(_core.__file__).parent / "py.typed").is_file()
 
 
 def test_upstream_version_is_exposed() -> None:

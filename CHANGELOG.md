@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Added the missing `py.typed` marker (PEP 561) - external type checkers were silently ignoring all of this package's type hints
+
 ## [0.2.0] - 2026-09-24
 
 ### Fixed
